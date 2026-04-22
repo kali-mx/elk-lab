@@ -32,8 +32,8 @@ header() { echo -e "\n${BOLD}${CYAN}========== $* ==========${NC}"; }
 
 # --- Config ------------------------------------------------------------------
 STACK_VERSION="9.2.4"
-ELASTIC_PASSWORD="CHANGE_ME"     # <------Change this!
-KIBANA_PASSWORD="CHANGE_ME"      # <------Change this!
+ELASTIC_PASSWORD="Change_me!"     # <------Change this!
+KIBANA_PASSWORD="Change_me!"      # <------Change this!
 ENCRYPTION_KEY="soc-lab-training-key-32chars-long!"
 LAB_DIR="$HOME/elk-lab"
 COMPOSE_TIMEOUT=200
@@ -62,9 +62,12 @@ done
 
 header "Pre-flight Checks"
 
-# Check default passwords
-if [ "$ELASTIC_PASSWORD" = "CHANGE_ME" ]; then
-    echo "Change your passwords Line 35-36"
+# Check default passwords have been changed
+if [ "$ELASTIC_PASSWORD" = "Change_me!" ]; then
+    echo ""
+    echo -e "${RED}[!] You must change the default passwords before running this script.${NC}"
+    echo -e "${RED}    Edit lines 35-36 in elk-install.sh and set your own passwords.${NC}"
+    echo ""
     exit 1
 fi
 
@@ -275,6 +278,8 @@ services:
       - xpack.ml.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - cluster.routing.allocation.disk.threshold_enabled=false
+      - action.destructive_requires_name=false
+      - indices.recovery.max_bytes_per_sec=50mb
     ulimits:
       memlock:
         soft: -1
@@ -290,6 +295,11 @@ services:
       retries: 30
       start_period: 40s
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
@@ -316,6 +326,11 @@ services:
       retries: 30
       start_period: 60s
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   fleet-server:
     image: docker.elastic.co/elastic-agent/elastic-agent:${STACK_VERSION}
@@ -340,6 +355,11 @@ services:
       - fleet-data:/usr/share/elastic-agent
       - /var/log:/var/log:ro
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   elastic-agent:
     image: docker.elastic.co/elastic-agent/elastic-agent:${STACK_VERSION}
@@ -353,9 +373,14 @@ services:
       - FLEET_ENROLLMENT_TOKEN=${AGENT_ENROLLMENT_TOKEN}
       - FLEET_INSECURE=true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - agent-data:/usr/share/elastic-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   es-data:
